@@ -49,7 +49,7 @@ class Bury
       ["commit", "Create Post"]
     ])
 
-    # POST the Content
+    # POST content
     reshtml, path, cookie = post("/p" , cookie, data)
 
     if reshtml.match('Post was successfully created')
@@ -64,8 +64,7 @@ class Bury
   end
 
   def self.parseopts()
-    # Settings
-    # Reading the default config file at ~/.buryrc
+    # Reading default settings from config file ~/.buryrc
     configf = {}
     f = File.expand_path("~/.buryrc")
     if File.exist?(f)
@@ -79,7 +78,7 @@ class Bury
       end
     end
 
-    # Parse the commandline-options
+    # Parse Command-Line options
     attrs = {}
     options = OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} [OPTION]... [FILE]..."
@@ -96,16 +95,16 @@ class Bury
       end
       opts.on("-a [AUTHOR]", "--author [AUTHOR]",
         "Specify the author for this posted",
-        "Without this option, the value in config will be used") do |author|
+        "Defaults to config defined value") do |author|
         attrs[:author] = author
       end
 
       opts.on("-s [HOST]", "--server [HOST]", "Specify the grave server",
-        "Without this flag, the value in config will be used") do |host|
+        "Defaults to config defined value") do |host|
         attrs[:host] = host
       end
       opts.on("-p [PORT]", "--port [PORT]", "Specify the grave server port",
-        "Without this flag, the value in config will be used") do |port|
+        "Defaults to config defined value") do |port|
         attrs[:port] = port
       end
       opts.on("-v", "--verbose", "Enable verbose output") do
@@ -129,18 +128,16 @@ class Bury
     @@cfg = configf["default"].merge(attrs)
 
     # Default configuration
-    # Host and port fall-back currently disabled
-    #@@cfg[:host] = "172.30.200.153" unless @@cfg[:host]
     @@cfg[:port] = "80" unless @@cfg[:port]
     @@cfg[:agent] = "User-Agent: bury" unless @@cfg[:agent]
 
     unless @@cfg[:postid]
-      # Determine Title
+      # Determine title
       unless @@cfg[:title]
         @@cfg[:title] = ARGF.filename unless ARGF.filename == "-"
       end
 
-      # Determine Content
+      # Determine content
       unless @@cfg[:content]
         if !ARGF.eof?
           @@cfg[:content] = ARGF.read
@@ -155,14 +152,14 @@ class Bury
   def self.get(path = "/", cookie = "")
     # Start HTTP "session"
     http = Net::HTTP.new(@@cfg[:host], @@cfg[:port])
-    # Prepare the GET
+    # Assemble GET request
     $log.info "GETting http://#{@@cfg[:host]}:#{@@cfg[:port]}#{path}"
     $log.debug "With Cookie: #{cookie.inspect}"
     headers = {
       'User-Agent' => @@cfg[:agent],
       'Cookie' => cookie
     }
-    # Send the request and process cookie
+    # Send request and process cookie
     begin
       response = http.get(path, headers)
     rescue
@@ -174,7 +171,7 @@ class Bury
     # Handle requested redirect
     case response
       when Net::HTTPSuccess     then [response.body, path, cookie]
-      when Net::HTTPRedirection then 
+      when Net::HTTPRedirection then
         get(URI.parse(response['location']).path, cookie)
     else
       warn "Received unexpected response #{response}"
@@ -185,7 +182,7 @@ class Bury
   def self.post(path, cookie, postdata)
     # Start HTTP "session"
     http = Net::HTTP.new(@@cfg[:host], @@cfg[:port])
-    # Prepare the POST
+    # Assemble POST request
     $log.info "POSTing to http://#{@@cfg[:host]}:#{@@cfg[:port]}#{path}"
     $log.debug "With Cookie: #{cookie.inspect}"
     headers = {
@@ -194,7 +191,7 @@ class Bury
       'Cookie' => cookie,
       'Content-Type' => 'application/x-www-form-urlencoded'
     }
-    # Send the request and process cookie
+    # Send request and process cookie
     begin
       response, data = http.post2(path, postdata, headers)
     rescue
